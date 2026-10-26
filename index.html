@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TuProfe20 Lab: Decimales</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fuentes Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { app: ['Poppins', 'sans-serif'] },
+                    animation: {
+                        floatUp: 'floatUp linear infinite',
+                        slideInRight: 'slideInRight 0.35s ease-out forwards',
+                        slideInUp: 'slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        robotFloat: 'robotFloat 3s ease-in-out infinite',
+                        robotJump: 'robotJump 1s cubic-bezier(0.28, 0.84, 0.42, 1) infinite',
+                        robotTalkArmL: 'robotTalkArmL 0.6s ease-in-out infinite',
+                        robotTalkArmR: 'robotTalkArmR 0.6s ease-in-out infinite 0.1s',
+                        popIn: 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        carryFly: 'carryFly 0.6s ease-out forwards',
+                    },
+                    keyframes: {
+                        floatUp: { '0%': { transform: 'translateY(105vh) rotate(0deg)' }, '100%': { transform: 'translateY(-25vh) rotate(360deg)' } },
+                        slideInRight: { '0%': { opacity: 0, transform: 'translateX(20px)' }, '100%': { opacity: 1, transform: 'translateX(0)' } },
+                        slideInUp: { 'from': { opacity: 0, transform: 'translateY(40px)' }, 'to': { opacity: 1, transform: 'translateY(0)' } },
+                        robotFloat: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
+                        robotJump: { '0%, 100%': { transform: 'translateY(0)' }, '30%': { transform: 'translateY(-18px)' } },
+                        robotTalkArmL: { '0%, 100%': { transform: 'rotate(45deg)' }, '50%': { transform: 'rotate(90deg)' } },
+                        robotTalkArmR: { '0%, 100%': { transform: 'rotate(-45deg)' }, '50%': { transform: 'rotate(-90deg)' } },
+                        popIn: { '0%': { transform: 'scale(0.5)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        carryFly: { '0%': { transform: 'translateY(20px) scale(0)', opacity: 0 }, '50%': { transform: 'translateY(-10px) scale(1.3)', opacity: 1 }, '100%': { transform: 'translateY(0) scale(1)', opacity: 1 } }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background-color: #0a0f1d; overflow-x: hidden; touch-action: manipulation; }
+        .katex-html { text-shadow: 0 0 1px currentColor; font-weight: bold; }
+        .katex { font-size: 1.12em !important; font-weight: bold; }
+        .katex-display { margin: 0 !important; }
+        input[type=text] { -moz-appearance: textfield; }
+        .crossed-out { background-image: linear-gradient(45deg, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%); }
+        .header-vertical { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+    <div id="root" class="font-app w-full min-h-[100dvh]"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useMemo, useEffect } = React;
+
+        const Latex = ({ math, block = false, className = "" }) => {
+            const html = useMemo(() => {
+                if (window.katex) {
+                    try { return window.katex.renderToString(math, { throwOnError: false, displayMode: block, strict: false }); } 
+                    catch (e) { return math; }
+                }
+                return math;
+            }, [math, block]);
+            return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+        };
+
+        const Icon = ({ paths, className = "", size = 24, fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{ __html: paths }} />
+        );
+
+        const Icons = {
+            Volume2: (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' />,
+            VolumeX: (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/>' />,
+            Home: (p) => <Icon {...p} paths='<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' />,
+            BookOpen: (p) => <Icon {...p} paths='<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' />,
+            ChevronLeft: (p) => <Icon {...p} paths='<path d="m15 18-6-6 6-6"/>' />,
+            ChevronRight: (p) => <Icon {...p} paths='<path d="m9 18 6-6-6-6"/>' />,
+            Shapes: (p) => <Icon {...p} paths='<path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/>' />,
+            Calculator: (p) => <Icon {...p} paths='<rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="8" y1="14" x2="8" y2="14.01"/>' />,
+            Plus: (p) => <Icon {...p} paths='<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' />,
+            Minus: (p) => <Icon {...p} paths='<line x1="5" y1="12" x2="19" y2="12"/>' />,
+            Play: (p) => <Icon {...p} fill="currentColor" paths='<polygon points="5 3 19 12 5 21 5 3"/>' />
+        };
+
+        const AudioController = {
+            ctx: null, muted: false,
+            init: function() { if (!this.ctx && window.AudioContext) this.ctx = new window.AudioContext(); },
+            play: function(type) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                
+                if (type === 'pop') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(450, now); osc.frequency.exponentialRampToValueAtTime(750, now + 0.09);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+                    osc.start(now); osc.stop(now + 0.09);
+                } else if (type === 'swoosh') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(280, now); osc.frequency.exponentialRampToValueAtTime(60, now + 0.18);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                    osc.start(now); osc.stop(now + 0.18);
+                } else if (type === 'carry') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(1200, now); osc.frequency.linearRampToValueAtTime(1600, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.15);
+                    osc.start(now); osc.stop(now + 0.15);
+                } else if (type === 'success') {
+                    const notes = [523.25, 659.25, 783.99];
+                    notes.forEach((freq, i) => {
+                        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+                        o.type = 'triangle'; o.frequency.value = freq;
+                        o.connect(g); g.connect(this.ctx.destination);
+                        const startTime = now + (i * 0.1);
+                        g.gain.setValueAtTime(0, startTime); g.gain.linearRampToValueAtTime(0.15, startTime + 0.04); g.gain.linearRampToValueAtTime(0, startTime + 0.3);
+                        o.start(startTime); o.stop(startTime + 0.3);
+                    });
+                }
+            },
+            toggleMute: function() { this.muted = !this.muted; return this.muted; }
+        };
+
+        const MODULES = [
+            {
+                id: 1, type: 'visual', badge: 'Módulo 1', icon: 'Shapes', color: 'from-emerald-500/30 to-green-600/30',
+                shortTitle: 'Representación Gráfica', title: 'Explorador Visual de Decimales',
+                statement: 'Comprende la adición y sustracción pintando décimos, centésimos y milésimos.',
+                qa: 'a) Selecciona el orden y la operación.', qb: 'b) Ingresa los valores para ver la representación visual.'
+            },
+            {
+                id: 2, type: 'board', badge: 'Módulo 2', icon: 'Calculator', color: 'from-blue-500/30 to-indigo-600/30',
+                shortTitle: 'Tablero Posicional', title: 'Calculadora Paso a Paso',
+                statement: 'Alinea la coma decimal y resuelve operaciones respetando el valor posicional.',
+                qa: 'a) Introduce dos números decimales.', qb: 'b) Observa la animación de las llevadas y la lectura final.'
+            }
+        ];
+
+        const FloatingBg = React.memo(() => {
+            const items = useMemo(() => {
+                const symbols = ['0,5', '1,25', '+', '-', '=', '10', '100', '1000', '0,01', '✨', '📐'];
+                return Array.from({ length: 24 }).map((_, i) => {
+                    const sym = symbols[i % symbols.length];
+                    return {
+                        id: i, sym, isTex: false, left: `${(i * 19) % 96}%`,
+                        duration: `${12 + (i % 10) * 1.4}s`, delay: `-${(i * 1.7) % 18}s`,
+                        size: `${1.2 + (i % 4) * 0.4}rem`, opacity: 0.15 + (i % 3) * 0.08
+                    };
+                });
+            }, []);
+            return (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    {items.map((it) => (
+                        <div key={it.id} className="absolute text-white font-black animate-floatUp select-none drop-shadow-lg"
+                             style={{ left: it.left, bottom: '-15%', fontSize: it.size, opacity: it.opacity, animationDuration: it.duration, animationDelay: it.delay }}>
+                            {it.sym}
+                        </div>
+                    ))}
+                </div>
+            );
+        });
+
+        const RobotAssistant = ({ isHappy }) => {
+            const containerAnim = isHappy ? 'animate-robotJump' : 'animate-robotFloat';
+            const armLAnim = isHappy ? 'rotate-[145deg] animate-pulse' : 'animate-robotTalkArmL';
+            const armRAnim = isHappy ? '-rotate-[145deg] animate-pulse' : 'animate-robotTalkArmR';
+            return (
+                <div className={`relative flex flex-col items-center drop-shadow-lg select-none ${containerAnim}`}>
+                    <div className="relative z-0 flex flex-col items-center translate-y-1">
+                        <div className={`w-4 h-4 rounded-full shadow-[0_0_12px_currentColor] z-10 transition-colors duration-300 ${isHappy ? 'text-emerald-400 bg-emerald-400' : 'text-cyan-400 bg-cyan-400 animate-pulse'}`}></div>
+                        <div className="w-1.5 h-4 bg-slate-400"></div>
+                    </div>
+                    <div className="relative z-10 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-300 rounded-[1.5rem] border-[4px] border-slate-400 shadow-xl flex flex-col items-center justify-center p-2">
+                        <div className="w-full h-full bg-slate-800 rounded-xl flex flex-col items-center justify-center p-1.5 shadow-inner border-2 border-slate-600">
+                            {isHappy ? (
+                                <div className="w-full flex justify-between px-1.5"><div className="w-3.5 h-2 bg-emerald-400 rounded-t-full mt-1"></div><div className="w-3.5 h-2 bg-emerald-400 rounded-t-full mt-1"></div></div>
+                            ) : (
+                                <div className="w-full flex justify-between px-1.5"><div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div><div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div></div>
+                            )}
+                            {isHappy ? <div className="w-6 h-3.5 bg-rose-400 rounded-b-full mt-1.5"></div> : <div className="w-4 h-1.5 bg-amber-400 rounded-full mt-2"></div>}
+                        </div>
+                    </div>
+                    <div className={`absolute top-1/2 -left-2.5 w-3.5 h-5 bg-slate-300 border-[3px] border-slate-400 rounded-full z-0 origin-top ${armLAnim}`}></div>
+                    <div className={`absolute top-1/2 -right-2.5 w-3.5 h-5 bg-slate-300 border-[3px] border-slate-400 rounded-full z-0 origin-top ${armRAnim}`}></div>
+                </div>
+            );
+        };
+
+        const parseVal = (str) => { const n = parseFloat((str||'').replace(',', '.')); return isNaN(n) ? 0 : n; };
+
+        /* --- LÓGICA DE LECTURA DE NÚMEROS DECIMALES --- */
+        function leerHasta999(n) {
+            if (n === 0) return ""; if (n === 100) return "cien";
+            const un = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+            const dec = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+            const esp = {11:"once", 12:"doce", 13:"trece", 14:"catorce", 15:"quince", 16:"dieciséis", 17:"diecisiete", 18:"dieciocho", 19:"diecinueve", 21:"veintiún", 22:"veintidós", 23:"veintitrés", 24:"veinticuatro", 25:"veinticinco", 26:"veintiséis", 27:"veintisiete", 28:"veintiocho", 29:"veintinueve"};
+            const cen = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+            let c = Math.floor(n / 100); let rest = n % 100;
+            let str = cen[c] + " ";
+            if (esp[rest]) { str += esp[rest]; } 
+            else {
+                let d = Math.floor(rest / 10); let u = rest % 10;
+                if (d === 1 && u === 0) str += "diez"; else if (d === 2 && u === 0) str += "veinte";
+                else { str += dec[d]; if (d >= 3 && u > 0) str += " y "; str += un[u]; }
+            }
+            return str.trim();
+        }
+        function leerHasta999999(n) {
+            if (n === 0) return "cero";
+            let miles = Math.floor(n / 1000); let rest = n % 1000;
+            let str = "";
+            if (miles === 1) str += "mil "; else if (miles > 1) str += leerHasta999(miles) + " mil ";
+            str += leerHasta999(rest);
+            return str.trim() || "cero";
+        }
+        function leerDecimalCompleto(resultStr) {
+            let parts = resultStr.split(',');
+            let intPart = parseInt(parts[0] || "0", 10);
+            let decPartStr = parts[1] || ""; let decPartLength = decPartStr.length;
+            
+            let intWord = leerHasta999999(intPart);
+            // Asegurar mayúscula en la primera letra, y el resto en minúscula natural
+            intWord = intWord.charAt(0).toUpperCase() + intWord.slice(1);
+            let intSuffix = intPart === 1 ? " entero" : " enteros";
+            
+            if (decPartLength === 0 || parseInt(decPartStr, 10) === 0) return intWord + intSuffix;
+            
+            let decNum = parseInt(decPartStr, 10);
+            let decWord = leerHasta999999(decNum);
+            const suffixes = ["", "décimo", "centésimo", "milésimo", "diezmilésimo", "cienmilésimo", "millonésimo"];
+            let suffix = suffixes[decPartLength] || "partes";
+            if (decNum !== 1) suffix += "s";
+            
+            return `${intWord}${intSuffix}, ${decWord} ${suffix}`;
+        }
+
+        const EXAMPLES = {
+            tenths: { sum: [{ t: 'Sin llevar', v: ['0,2', '0,3', '0,4'] }, { t: 'Llevada Simple', v: ['0,5', '0,4', '0,6'] }, { t: 'Doble Llevada', v: ['0,8', '0,9', '0,7'] }], sub: [{ t: 'Sin prestar', v: ['0,8', '0,3'] }, { t: 'Prestando', v: ['1,2', '0,5'] }, { t: 'Préstamo Mayor', v: ['2,4', '0,7'] }] },
+            hundredths: { sum: [{ t: 'Sin llevar', v: ['0,15', '0,20', '0,12'] }, { t: 'Llevada Simple', v: ['0,45', '0,35', '0,25'] }, { t: 'Doble Llevada', v: ['0,85', '0,76', '0,50'] }], sub: [{ t: 'Sin prestar', v: ['0,75', '0,25'] }, { t: 'Prestando', v: ['1,12', '0,45'] }, { t: 'Préstamo Mayor', v: ['2,05', '0,86'] }] },
+            thousandths: { sum: [{ t: 'Sin llevar', v: ['0,125', '0,250'] }, { t: 'Llevada', v: ['0,450', '0,650'] }, { t: 'Llevada Compleja', v: ['0,875', '0,550'] }], sub: [{ t: 'Sin prestar', v: ['0,500', '0,125'] }, { t: 'Prestando', v: ['1,250', '0,500'] }, { t: 'Préstamo Mayor', v: ['2,100', '0,875'] }] }
+        };
+
+        const BG_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-fuchsia-500'];
+
+        const RenderGrid = ({ mode, op, parsedInputs }) => {
+            const partsPerUnit = mode === 'tenths' ? 10 : 100;
+            const partsArr = parsedInputs.map(v => Math.round(v * partsPerUnit));
+            const totalParts = op === 'sum' ? partsArr.reduce((a,b)=>a+b,0) : Math.max(0, partsArr[0]);
+            const units = Math.max(1, Math.ceil(totalParts / partsPerUnit));
+
+            const getCellColor = (globalIdx) => {
+                if (op === 'sum') {
+                    let sum = 0;
+                    for (let i = 0; i < partsArr.length; i++) {
+                        if (globalIdx < sum + partsArr[i]) return BG_COLORS[i];
+                        sum += partsArr[i];
+                    }
+                    return 'bg-white border-slate-200';
+                } else {
+                    const min = partsArr[0] || 0; const sub = partsArr[1] || 0;
+                    if (globalIdx < min) {
+                        if (globalIdx >= min - sub) return 'crossed-out bg-rose-200 border-rose-400';
+                        return BG_COLORS[0];
+                    }
+                    return 'bg-white border-slate-200';
+                }
+            };
+
+            return (
+                <div className="flex flex-wrap justify-center gap-6 p-2 w-full">
+                    {Array.from({length: units}).map((_, uIdx) => (
+                        <div key={uIdx} className="flex flex-col items-center animate-popIn" style={{animationDelay: `${uIdx*0.1}s`}}>
+                            <div className="text-slate-500 font-black mb-2 tracking-widest text-xs uppercase">UNIDAD {uIdx+1}</div>
+                            {mode === 'tenths' ? (
+                                <div className="w-[80px] h-[300px] sm:w-[100px] sm:h-[350px] border-4 border-slate-300 bg-white rounded-xl overflow-hidden shadow-md flex flex-col">
+                                    {Array.from({length: 10}).reverse().map((_, i) => (
+                                        <div key={i} className={`flex-1 border-b-[1.5px] border-slate-300 last:border-0 transition-colors duration-300 ${getCellColor(uIdx*10 + i)}`} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="w-[220px] h-[220px] sm:w-[280px] sm:h-[280px] border-4 border-slate-300 bg-white rounded-xl p-1 shadow-md grid grid-cols-10 grid-rows-10 gap-[1px]">
+                                    {Array.from({length: 100}).reverse().map((_, i) => {
+                                        const row = Math.floor(i/10); const col = i%10;
+                                        return <div key={i} className={`w-full h-full rounded-sm transition-colors duration-300 ${getCellColor(uIdx*100 + (row*10 + col))}`} />
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const RenderCubes = ({ op, parsedInputs }) => {
+            const p1 = Math.round((parsedInputs[0]||0) * 1000);
+            const p2 = Math.round((parsedInputs[1]||0) * 1000);
+            const total = op === 'sum' ? p1 + p2 : Math.max(0, p1);
+            const units = Math.max(1, Math.ceil(total / 1000));
+            const proj = (x,y,z) => [150 + (x-y)*8, 120 + (x+y)*4-z*8];
+            const face = pts => pts.map(p=>proj(...p).join(',')).join(' ');
+
+            return (
+                <div className="flex flex-wrap justify-center gap-6 p-2 w-full">
+                    {Array.from({length: units}).map((_, uIdx) => {
+                        const startIdx = uIdx * 1000;
+                        const renderSolid = (colorFill, strokeC) => (
+                            <g stroke={strokeC} strokeWidth="1">
+                                <polygon points={face([[0,0,10],[10,0,10],[10,10,10],[0,10,10]])} fill={colorFill} fillOpacity="0.8"/>
+                                <polygon points={face([[0,10,0],[10,10,0],[10,10,10],[0,10,10]])} fill={colorFill} fillOpacity="0.6"/>
+                                <polygon points={face([[10,0,0],[10,10,0],[10,10,10],[10,0,10]])} fill={colorFill} fillOpacity="0.4"/>
+                            </g>
+                        );
+
+                        const voxels = [];
+                        for(let z=0; z<10; z++) for(let y=9; y>=0; y--) for(let x=0; x<10; x++) {
+                            const i = startIdx + z*100 + y*10 + x;
+                            let color = null; let isCrossed = false;
+                            if (op === 'sum') {
+                                if (i < p1) color = {f:'#3b82f6', s:'#1d4ed8'}; else if (i < p1+p2) color = {f:'#10b981', s:'#047857'};
+                            } else {
+                                if (i < p1) { if (i >= p1 - p2) { color = {f:'#fca5a5', s:'#ef4444'}; isCrossed = true; } else color = {f:'#3b82f6', s:'#1d4ed8'}; }
+                            }
+                            if (color) {
+                                const yy = y + (y>=5 ? 0.4 : 0); const X=x+0.9, Y=yy+0.9, Z=z+0.9;
+                                voxels.push(
+                                    <g key={i} stroke={color.s} strokeWidth="0.5">
+                                        <polygon points={face([[x,yy,Z],[X,yy,Z],[X,Y,Z],[x,Y,Z]])} fill={color.f} fillOpacity={isCrossed?0.5:1}/>
+                                        <polygon points={face([[x,Y,z],[X,Y,z],[X,Y,Z],[x,Y,Z]])} fill={color.f} fillOpacity={isCrossed?0.5:0.8}/>
+                                        <polygon points={face([[X,yy,z],[X,Y,z],[X,Y,Z],[X,yy,Z]])} fill={color.f} fillOpacity={isCrossed?0.5:0.6}/>
+                                        {isCrossed && <line x1={proj(x,yy,Z)[0]} y1={proj(x,yy,Z)[1]} x2={proj(X,Y,Z)[0]} y2={proj(X,Y,Z)[1]} stroke="#991b1b" strokeWidth="1.5"/>}
+                                    </g>
+                                );
+                            }
+                        }
+
+                        return (
+                            <div key={uIdx} className="flex flex-col items-center animate-popIn" style={{animationDelay: `${uIdx*0.1}s`}}>
+                                <div className="text-slate-500 font-black mb-2 tracking-widest text-xs uppercase">UNIDAD {uIdx+1}</div>
+                                <div className="w-[220px] h-[220px] sm:w-[280px] sm:h-[280px] border-4 border-slate-300 bg-white rounded-xl flex items-center justify-center shadow-md">
+                                    <svg viewBox="-20 -20 340 300" className="w-full h-full drop-shadow-lg">
+                                        {renderSolid('transparent', '#cbd5e1')}
+                                        {voxels}
+                                    </svg>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        const PositionalBoard = () => {
+            const [val1, setVal1] = useState('14,68');
+            const [val2, setVal2] = useState('5,95');
+            const [op, setOp] = useState('+');
+            const [calcData, setCalcData] = useState(null);
+
+            const POS_LABELS = {
+                'CM': 'CM', 'DM': 'DM', 'UM': 'UM', 'C': 'C', 'D': 'D', 'U': 'U',
+                'd': 'd', 'c': 'c', 'm': 'm', 'dm': 'dm', 'cm': 'cm', 'mi': 'mi'
+            };
+
+            const calculate = () => {
+                AudioController.play('pop');
+                let s1 = val1.replace(',', '.'); let s2 = val2.replace(',', '.');
+                if(!s1 || isNaN(s1)) s1 = '0'; if(!s2 || isNaN(s2)) s2 = '0';
+                
+                if(s1.includes('.')) s1 = s1.split('.')[0] + '.' + s1.split('.')[1].substring(0, 6);
+                if(s2.includes('.')) s2 = s2.split('.')[0] + '.' + s2.split('.')[1].substring(0, 6);
+                
+                let n1 = parseFloat(s1); let n2 = parseFloat(s2);
+                if (op === '-' && n1 < n2) { alert("En resta, el número superior debe ser mayor o igual."); return; }
+
+                if(!s1.includes('.')) s1 += '.0'; if(!s2.includes('.')) s2 += '.0';
+                let [i1, d1] = s1.split('.'); let [i2, d2] = s2.split('.');
+                
+                const maxD = Math.max(d1.length, d2.length); d1 = d1.padEnd(maxD, '0'); d2 = d2.padEnd(maxD, '0');
+                const maxI = Math.max(i1.length, i2.length, 1); i1 = i1.padStart(maxI, ' '); i2 = i2.padStart(maxI, ' ');
+
+                const intKeys = ['U', 'D', 'C', 'UM', 'DM', 'CM'];
+                const decKeys = ['d', 'c', 'm', 'dm', 'cm', 'mi'];
+
+                let rawMath = [];
+                // Parte Decimal (de menor valor a mayor -> derecha a izquierda)
+                for(let i = maxD-1; i >= 0; i--) {
+                    rawMath.push({ 
+                        id: `dec-${i}`, isDot: false, key: decKeys[i], 
+                        c1: parseInt(d1[i]), c2: parseInt(d2[i]) 
+                    });
+                }
+                
+                // Parte Entera (Unidades, Decenas... -> derecha a izquierda)
+                for(let i = maxI-1; i >= 0; i--) {
+                    const pValIdx = maxI - 1 - i;
+                    rawMath.push({ 
+                        id: `int-${i}`, isDot: false, key: intKeys[pValIdx] || '?', 
+                        c1: i1[i] === ' ' ? null : parseInt(i1[i]), 
+                        c2: i2[i] === ' ' ? null : parseInt(i2[i]) 
+                    });
+                }
+
+                let carry = 0;
+                rawMath.forEach(col => {
+                    let v1 = col.c1 || 0;
+                    let v2 = col.c2 || 0;
+                    if (op === '+') { 
+                        let sum = v1 + v2 + carry; 
+                        col.res = sum % 10; col.cOut = Math.floor(sum / 10); 
+                    } else { 
+                        let diff = v1 - v2 - carry; 
+                        if(diff < 0) { diff += 10; col.cOut = 1; } 
+                        else { col.cOut = 0; } 
+                        col.res = diff; 
+                    }
+                    col.cIn = carry; carry = col.cOut;
+                });
+
+                if (op === '+' && carry > 0) {
+                    rawMath.push({ id: 'extra', isDot: false, key: intKeys[maxI] || '?', c1: null, c2: null, res: carry, cIn: carry, cOut: 0 });
+                }
+
+                let finalCols = [];
+                // Revertimos para pintar de izquierda a derecha
+                [...rawMath].reverse().forEach(col => {
+                    finalCols.push(col);
+                    // Insertamos la coma justo después de la unidad
+                    if (col.key === 'U') { 
+                        finalCols.push({ id: 'dot', isDot: true, key: 'dot', res: ',', c1: ',', c2: ',' }); 
+                    }
+                });
+
+                const resultStr = finalCols.map(c => c.res).join('');
+                const readingStr = leerDecimalCompleto(resultStr);
+
+                setCalcData({ cols: finalCols, ts: Date.now(), resultStr, readingStr });
+                setTimeout(() => AudioController.play('success'), (finalCols.length - 1) * 200 + 400);
+            };
+
+            return (
+                <div className="w-full flex flex-col items-center">
+                    <div className="w-full bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200 shadow-sm flex flex-col gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Datos</span>
+                        </div>
+                        <div className="flex flex-wrap justify-center items-center gap-3 w-full">
+                            <input type="text" value={val1} onChange={e => setVal1(e.target.value.replace(/[^0-9,]/g,''))} className="bg-slate-50 border-2 border-slate-300 focus:border-blue-500 rounded-xl p-3 text-2xl font-black text-slate-800 text-center outline-none w-28 sm:w-36" placeholder="0,0" />
+                            <button onClick={() => { AudioController.play('pop'); setOp(op==='+'?'-':'+'); }} className="w-12 h-12 shrink-0 bg-white rounded-xl text-3xl font-black text-amber-500 border-2 border-slate-300 hover:border-amber-400 shadow-sm transition-all flex items-center justify-center">
+                                {op}
+                            </button>
+                            <input type="text" value={val2} onChange={e => setVal2(e.target.value.replace(/[^0-9,]/g,''))} className="bg-slate-50 border-2 border-slate-300 focus:border-blue-500 rounded-xl p-3 text-2xl font-black text-slate-800 text-center outline-none w-28 sm:w-36" placeholder="0,0" />
+                            <button onClick={calculate} className="bg-blue-600 text-white font-black px-6 py-3 rounded-xl text-lg uppercase hover:bg-blue-700 active:scale-95 transition-transform shadow-md ml-auto sm:ml-2">
+                                Resolver
+                            </button>
+                        </div>
+                    </div>
+
+                    {calcData && (
+                        <div className="w-full bg-white rounded-2xl p-4 border-2 border-slate-200 shadow-sm flex flex-col items-center animate-popIn overflow-x-auto">
+                            <div className="grid gap-x-2 gap-y-3 font-app justify-center items-end min-w-max pb-2" style={{ gridTemplateColumns: `auto repeat(${calcData.cols.length}, minmax(35px, 1fr)) auto` }}>
+                                {/* Encabezados */}
+                                <div className="text-right pr-4"></div>
+                                {calcData.cols.map((col, i) => (
+                                    <div key={`head-${col.id}`} className="text-center pb-2">
+                                        <div className={`text-lg sm:text-xl font-black ${col.isDot ? 'text-transparent' : 'text-slate-400'}`}>
+                                            {POS_LABELS[col.key] || ''}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div></div>
+
+                                {/* Llevadas */}
+                                <div className="text-right pr-4 text-xs font-bold text-slate-400 uppercase border-b-2 border-slate-100 pb-1">Lleva</div>
+                                {calcData.cols.map((col, i) => {
+                                    const rIdx = calcData.cols.filter(c=>!c.isDot).length - calcData.cols.slice(0,i+1).filter(c=>!c.isDot).length;
+                                    const hasCarry = !col.isDot && col.cIn > 0;
+                                    return (
+                                        <div key={`c-${col.id}-${calcData.ts}`} className="h-8 flex justify-center items-end relative border-b-2 border-slate-100 pb-1">
+                                            {hasCarry && (
+                                                <div className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-black shadow-md opacity-0 animate-carryFly ${op==='+'?'bg-amber-500':'bg-rose-500'}`} style={{ animationDelay: `${rIdx * 0.2 + 0.1}s` }} onAnimationStart={() => AudioController.play('carry')}>
+                                                    {col.cIn}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                <div className="border-b-2 border-slate-100 w-full h-8"></div>
+
+                                {/* N1 */}
+                                <div className="text-right pr-4 pt-2"></div>
+                                {calcData.cols.map((col, i) => (
+                                    <div key={`n1-${i}`} className={`text-center text-3xl sm:text-4xl font-black pt-1 ${col.isDot ? 'text-slate-400' : 'text-slate-800'}`}>{col.c1 !== null ? col.c1 : ''}</div>
+                                ))}
+                                <div></div>
+
+                                {/* N2 y Op */}
+                                <div className="text-right pr-4"></div>
+                                {calcData.cols.map((col, i) => (
+                                    <div key={`n2-${i}`} className={`text-center text-3xl sm:text-4xl font-black ${col.isDot ? 'text-slate-400' : 'text-slate-800'}`}>{col.c2 !== null ? col.c2 : ''}</div>
+                                ))}
+                                <div className="text-left pl-2 sm:pl-4 text-rose-600 text-3xl sm:text-4xl font-black self-center">{op}</div>
+
+                                {/* Linea */}
+                                <div className="col-span-full h-[3px] bg-slate-300 rounded-full my-2"></div>
+
+                                {/* Res */}
+                                <div className="text-right pr-4 text-xs font-bold text-blue-500 uppercase">Res</div>
+                                {calcData.cols.map((col, i) => {
+                                    const rIdx = calcData.cols.filter(c=>!c.isDot).length - calcData.cols.slice(0,i+1).filter(c=>!c.isDot).length;
+                                    return (
+                                        <div key={`r-${col.id}-${calcData.ts}`} className={`text-center text-4xl sm:text-5xl font-black opacity-0 animate-popIn ${col.isDot ? 'text-slate-800' : 'text-blue-600'}`} style={{ animationDelay: `${rIdx * 0.2}s` }}>
+                                            {col.res}
+                                        </div>
+                                    );
+                                })}
+                                <div></div>
+                            </div>
+
+                            <div className="mt-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-3 w-full animate-popIn" style={{animationDelay: `${calcData.cols.length * 0.2 + 0.3}s`}}>
+                                <div className="text-blue-600 text-xs font-black uppercase tracking-wider mb-1">Se lee:</div>
+                                <div className="text-lg text-slate-800 font-bold">{calcData.readingStr}</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        function App() {
+            const [showCover, setShowCover] = useState(true);
+            const [activeIdx, setActiveIdx] = useState(0);
+            const [muted, setMuted] = useState(false);
+
+            // Módulo 1 State
+            const [mode, setMode] = useState('tenths');
+            const [op, setOp] = useState('sum');
+            const [inputs, setInputs] = useState(['', '', '']);
+
+            const current = MODULES[activeIdx];
+
+            const handleToggleMute = () => { AudioController.init(); setMuted(AudioController.toggleMute()); };
+            const enterModule = (idx) => { AudioController.init(); AudioController.play('swoosh'); setActiveIdx(idx); setShowCover(false); };
+
+            const updateInput = (idx, val) => {
+                AudioController.play('pop');
+                const newIns = [...inputs]; newIns[idx] = val.replace(/[^0-9,.]/g, '').replace('.', ','); setInputs(newIns);
+            };
+
+            const maxInputs = (mode === 'thousandths' || op === 'sub') ? 2 : 3;
+            const parsedInputs = inputs.slice(0, maxInputs).map(parseVal);
+            const visualTotal = op === 'sum' ? parsedInputs.reduce((a,b)=>a+b,0) : Math.max(0, parsedInputs[0] - parsedInputs[1]);
+
+            let robotMsg = "";
+            if (activeIdx === 0) {
+                robotMsg = `La ${op==='sum'?'suma':'resta'} total es ${visualTotal.toFixed(mode==='tenths'?1:mode==='hundredths'?2:3).replace('.',',')}. ¡Observa cómo se agrupan las partes!`;
+            } else {
+                robotMsg = "Alinea siempre la coma decimal. Si los números no tienen la misma cantidad de cifras decimales, ¡completa con ceros!";
+            }
+
+            if (showCover) {
+                return (
+                    <div className="min-h-[100dvh] bg-[#0a0f1d] flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-x-hidden select-none">
+                        <div className="absolute top-[10%] left-1/4 -translate-x-1/2 w-[380px] h-[380px] sm:w-[600px] sm:h-[600px] bg-blue-600/30 blur-[100px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse" style={{ animationDuration: '4s' }}></div>
+                        <div className="absolute bottom-[5%] right-[10%] w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] bg-fuchsia-600/20 blur-[80px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+                        <FloatingBg />
+
+                        <div className="absolute top-4 right-4 z-20">
+                            <button onClick={handleToggleMute} className="p-3 rounded-2xl bg-white/10 backdrop-blur-md shadow-lg text-white hover:bg-white/20 transition-all border border-white/10">
+                                {muted ? <Icons.VolumeX size={24} className="text-rose-400" /> : <Icons.Volume2 size={24} />}
+                            </button>
+                        </div>
+
+                        <div className="relative z-10 text-center w-full max-w-7xl mt-4 sm:mt-0 flex flex-col items-center">
+                            <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border-2 border-cyan-400/40 bg-slate-900/40 backdrop-blur-xl text-cyan-300 font-black tracking-widest uppercase mb-5 shadow-2xl animate-slideInUp">
+                                <Icons.BookOpen size={20} /> TuProfe20 Lab
+                            </div>
+                            <h1 className="text-4xl sm:text-6xl md:text-[5rem] leading-[1.08] font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-200 to-blue-500 mb-5 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] animate-slideInUp">
+                                Operaciones con<br className="hidden sm:block" />Decimales
+                            </h1>
+                            <p className="text-base sm:text-xl md:text-2xl text-blue-200/90 mb-10 font-bold max-w-3xl mx-auto px-4 animate-slideInUp">
+                                Selecciona un módulo interactivo para explorar la suma y resta de decimales de forma visual y posicional. ✨
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row justify-center gap-5 w-full max-w-4xl px-2 pb-8">
+                                {MODULES.map((mod, idx) => {
+                                    const CardIcon = Icons[mod.icon];
+                                    return (
+                                        <button key={mod.id} onClick={() => enterModule(idx)} className={`group text-left p-8 rounded-[2.5rem] bg-gradient-to-br ${mod.color} border-[2px] border-white/15 backdrop-blur-xl hover:-translate-y-3 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-300 flex-1 relative overflow-hidden animate-slideInUp`}>
+                                            <div className="absolute -bottom-4 -right-4 p-4 opacity-10 group-hover:opacity-25 group-hover:scale-125 transition-all duration-500 text-white"><CardIcon size={120} /></div>
+                                            <div className="bg-white/15 text-white text-xs font-bold px-4 py-1.5 rounded-full inline-block mb-3 shadow-sm backdrop-blur-md self-start border border-white/25">{mod.badge}</div>
+                                            <h3 className="text-3xl font-black text-white mb-3 drop-shadow-md leading-tight">{mod.shortTitle}</h3>
+                                            <p className="text-white/80 text-sm font-medium mb-4 leading-relaxed">{mod.statement}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-[100dvh] w-full bg-[#0a0f1d] text-slate-800 flex flex-col p-2 sm:p-4 relative overflow-hidden select-none">
+                    <div className="absolute inset-0 pointer-events-none z-0">
+                        <div className="absolute top-[10%] left-1/4 -translate-x-1/2 w-[600px] h-[600px] bg-blue-600/30 blur-[100px] rounded-full mix-blend-screen opacity-50"></div>
+                        <div className="absolute bottom-[5%] right-[10%] w-[500px] h-[500px] bg-fuchsia-600/20 blur-[80px] rounded-full mix-blend-screen opacity-50"></div>
+                        <FloatingBg />
+                    </div>
+
+                    <div className="shrink-0 relative z-10 w-full max-w-7xl mx-auto flex justify-between items-center mb-3 px-1 sm:px-2">
+                        <button onClick={() => { AudioController.play('swoosh'); setShowCover(true); }} className="flex items-center justify-center w-11 h-11 sm:w-auto sm:px-5 sm:py-2.5 rounded-[1.2rem] bg-white/10 border border-white/20 backdrop-blur-md text-white font-black hover:bg-white/20 transition-all shadow-md active:scale-95 hover:scale-105">
+                            <Icons.Home size={22} className="sm:mr-2" />
+                            <span className="hidden sm:inline text-base sm:text-lg">Portada</span>
+                        </button>
+                        <h2 className="text-sm sm:text-xl md:text-2xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] tracking-wide bg-black/25 px-4 sm:px-6 py-2 rounded-full border border-white/15 text-center truncate mx-2">
+                            {current.badge}: {current.shortTitle}
+                        </h2>
+                        <button onClick={handleToggleMute} className="flex p-2.5 sm:p-3 rounded-[1.2rem] bg-white/10 border border-white/20 backdrop-blur-md text-white hover:bg-white/20 transition-all shadow-md active:scale-95 hover:scale-105">
+                            {muted ? <Icons.VolumeX size={22} /> : <Icons.Volume2 size={22} />}
+                        </button>
+                    </div>
+
+                    <div className="flex-1 min-h-[65vh] relative z-10 w-full max-w-7xl mx-auto bg-[#fdfdfd] rounded-[1.5rem] sm:rounded-[2.5rem] border-[5px] sm:border-[8px] border-blue-600 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden">
+                        <div className="absolute inset-0 opacity-[0.16] bg-[linear-gradient(#475569_1px,transparent_1px),linear-gradient(90deg,#475569_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none z-0"></div>
+
+                        <div className="flex-1 flex flex-col items-center justify-start pt-3 pb-4 sm:pt-5 sm:pb-6 px-3 sm:px-6 relative overflow-y-auto w-full z-10">
+                            
+                            <div className="w-full max-w-6xl bg-amber-50 rounded-2xl border-l-[8px] border-amber-500 p-3.5 sm:p-5 mb-4 shadow-sm relative">
+                                <p className="text-slate-700 text-sm sm:text-lg font-bold mb-2">{current.statement}</p>
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-xs sm:text-base font-black text-amber-800">
+                                    <span className="bg-amber-200/60 px-3 py-1 rounded-lg">{current.qa}</span>
+                                    <span className="bg-amber-200/60 px-3 py-1 rounded-lg">{current.qb}</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full max-w-6xl bg-white/95 rounded-3xl shadow-md border-[4px] border-blue-600 flex flex-col lg:flex-row overflow-hidden relative z-10">
+                                
+                                <div className={`p-3 sm:p-5 flex flex-col items-center bg-indigo-50/30 overflow-x-auto min-h-[400px] ${activeIdx === 0 ? 'lg:w-[58%]' : 'w-full'}`}>
+                                    <div className="w-full flex items-center justify-between mb-4">
+                                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 font-black rounded-full text-xs sm:text-sm uppercase tracking-wider">
+                                            a) Zona de Trabajo
+                                        </span>
+                                    </div>
+                                    {activeIdx === 0 ? (
+                                        mode === 'thousandths' ? <RenderCubes op={op} parsedInputs={parsedInputs}/> : <RenderGrid mode={mode} op={op} parsedInputs={parsedInputs}/>
+                                    ) : (
+                                        <PositionalBoard />
+                                    )}
+                                </div>
+
+                                {activeIdx === 0 && <div className="w-full h-[4px] lg:w-[4px] lg:h-auto bg-blue-600"></div>}
+
+                                {activeIdx === 0 && (
+                                    <div className="lg:w-[42%] p-4 sm:p-6 flex flex-col bg-fuchsia-50/35 relative">
+                                        <div className="w-full flex items-center justify-between mb-4">
+                                            <span className="px-3 py-1 bg-fuchsia-100 text-fuchsia-700 font-black rounded-full text-xs sm:text-sm uppercase tracking-wider">
+                                                b) Controles y Ejemplos
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-col gap-4 w-full">
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {[
+                                                    { id: 'tenths', label: 'Décimos' },
+                                                    { id: 'hundredths', label: 'Centésimos' },
+                                                    { id: 'thousandths', label: 'Milésimos' }
+                                                ].map((t) => (
+                                                    <button
+                                                        key={t.id}
+                                                        onClick={() => { AudioController.play('pop'); setMode(t.id); setInputs(['','','']); }}
+                                                        className={`py-2.5 px-1 rounded-xl font-black text-[10px] sm:text-xs uppercase border-b-[4px] transition-all ${
+                                                            mode === t.id
+                                                                ? 'bg-indigo-600 border-indigo-800 text-white shadow-md scale-105'
+                                                                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        {t.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => { AudioController.play('pop'); setOp('sum'); setInputs(['','','']); }}
+                                                    className={`flex-1 py-3 rounded-xl font-black text-sm uppercase border-b-[4px] transition-all flex items-center justify-center gap-1 ${
+                                                        op === 'sum' ? 'bg-emerald-500 border-emerald-700 text-white shadow-md' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    <Icons.Plus size={20} /> Suma
+                                                </button>
+                                                <button
+                                                    onClick={() => { AudioController.play('pop'); setOp('sub'); setInputs(['','','']); }}
+                                                    className={`flex-1 py-3 rounded-xl font-black text-sm uppercase border-b-[4px] transition-all flex items-center justify-center gap-1 ${
+                                                        op === 'sub' ? 'bg-rose-500 border-rose-700 text-white shadow-md' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    <Icons.Minus size={20} /> Resta
+                                                </button>
+                                            </div>
+
+                                            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border-2 border-slate-200 shadow-sm flex flex-col gap-3">
+                                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Ingresa Valores</span>
+                                                {Array.from({length: maxInputs}).map((_, i) => (
+                                                    <div key={i} className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-black text-white text-lg shadow-sm ${i===0?'bg-blue-500':i===1?(op==='sum'?'bg-emerald-500':'bg-rose-500'):'bg-fuchsia-500'}`}>{i+1}</div>
+                                                        <input type="text" value={inputs[i]} onChange={e => updateInput(i, e.target.value)} placeholder="0,0" className="flex-1 bg-slate-50 border-2 border-slate-200 focus:border-blue-500 rounded-xl p-2.5 text-2xl font-black text-slate-800 outline-none text-center transition-colors"/>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border-2 border-slate-200 shadow-sm flex flex-col gap-2">
+                                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1">Ejemplos Paso a Paso</span>
+                                                {EXAMPLES[mode][op].map((ex, i) => (
+                                                    <button key={i} onClick={() => { AudioController.play('swoosh'); const newIns=[...inputs]; ex.v.forEach((v,j)=>newIns[j]=v); setInputs(newIns); }} 
+                                                            className="flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all text-left active:scale-[0.98]">
+                                                        <div>
+                                                            <div className="text-slate-700 font-bold text-xs">{ex.t}</div>
+                                                            <div className="text-blue-600 font-black text-sm">{ex.v.join(op==='sum'?' + ':' - ')}</div>
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500"><Icons.Play size={16} className="ml-0.5"/></div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 bg-white/85 backdrop-blur-md w-full px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-6 border-t-[5px] border-slate-200 z-10 relative">
+                            <div className="shrink-0">
+                                <RobotAssistant isHappy={true} />
+                            </div>
+                            <div className="flex-1 text-sm sm:text-lg md:text-xl font-bold text-slate-800 leading-snug sm:leading-relaxed bg-slate-50/90 sm:bg-transparent p-3 sm:p-0 rounded-2xl border border-slate-200 sm:border-none">
+                                {robotMsg}
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 bg-white/90 backdrop-blur-md p-3 sm:p-5 w-full flex flex-col items-center gap-3 border-t-[5px] border-slate-200 z-10 relative">
+                            <div className="flex justify-center items-stretch w-full max-w-4xl gap-3 sm:gap-4 h-14 sm:h-16">
+                                <button
+                                    onClick={() => { AudioController.init(); AudioController.play('pop-reverse'); setActiveIdx((activeIdx - 1 + MODULES.length) % MODULES.length); }}
+                                    className="flex-[0.8] bg-indigo-300 border-b-[6px] border-indigo-500 text-indigo-900 rounded-l-[1.4rem] rounded-r-2xl font-black text-base sm:text-xl flex items-center justify-center gap-1 sm:gap-2 active:border-b-0 active:translate-y-[6px] transition-all hover:bg-indigo-200"
+                                >
+                                    <Icons.ChevronLeft size={28} />
+                                    <span className="hidden sm:inline">Anterior</span>
+                                </button>
+
+                                <div className="bg-indigo-600 text-white font-black px-4 sm:px-8 text-base sm:text-xl flex items-center justify-center rounded-2xl border-b-[6px] border-indigo-800 shadow-inner whitespace-nowrap">
+                                    Módulo {activeIdx + 1} / {MODULES.length}
+                                </div>
+
+                                <button
+                                    onClick={() => { AudioController.init(); AudioController.play('success'); setActiveIdx((activeIdx + 1) % MODULES.length); }}
+                                    className="flex-[1.8] bg-gradient-to-r from-[#f59e0b] to-[#f97316] border-b-[6px] border-[#c2410c] text-white rounded-r-[1.4rem] rounded-l-2xl font-black text-base sm:text-2xl flex items-center justify-center gap-1 sm:gap-2 active:border-b-0 active:translate-y-[6px] transition-all hover:brightness-110 shadow-sm"
+                                >
+                                    <span>Siguiente Módulo</span>
+                                    <Icons.ChevronRight size={28} />
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
